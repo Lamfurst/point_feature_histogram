@@ -2,7 +2,7 @@ import numpy
 import csv
 from mpl_toolkits import mplot3d
 import matplotlib.pyplot as plt
-#from mpl_toolkits.mplot3d import Axes3D
+from mpl_toolkits.mplot3d import Axes3D
 
 def load_pc(filename):
     """Load a csv PC.
@@ -285,3 +285,46 @@ def convert_matrix_to_pc(numpy_pc):
         pc.append((numpy_pc[0:3,i]))
 
     return pc
+
+def draw_normal(fig, origin, normal, scale=0.1):
+    """Draws a normal on fig.
+
+    inputs:
+        fig - the matplotlib object to plot on.
+        origin - a 3 x 1 numpy matrix representing the origin of the normal.
+        normal - a 3 x 1 numpy matrix representing the normal.
+        scale - the scale of the normal.
+    outputs:
+        fig - the matplotlib object to plot on.
+
+    """
+    ax = fig.gca()
+    # Plot the arrow shaft
+    # start = origin.T
+    # direction = normal.T / numpy.linalg.norm(normal)
+    # length = scale
+    # end = start + direction * length
+    start = numpy.array(origin).flatten()
+    print()
+    direction = numpy.array(normal).flatten() / numpy.linalg.norm(normal)
+    print(direction)
+    length = scale
+    # Plot the arrow shaft
+    end = start + direction * length
+    ax.plot([start[0], end[0]], [start[1], end[1]], [start[2], end[2]], color='r', linewidth=2)
+
+    # Plot the arrow head (similar calculations as before)
+    head_length = 0.2 * length
+    head_width = 0.1 * length
+    head_vertices = end - direction * head_length
+    head_left = head_vertices - numpy.cross(direction, [1,0,0]) * head_width
+    head_right = head_vertices + numpy.cross(direction, [1,0,0]) * head_width
+
+    ax.plot([end[0], head_left[0]], [end[1], head_left[1]], [end[2], head_left[2]], color='r', linewidth=2)
+    ax.plot([end[0], head_right[0]], [end[1], head_right[1]], [end[2], head_right[2]], color='r', linewidth=2)
+    ax.plot([head_left[0], head_right[0]], [head_left[1], head_right[1]], [head_left[2], head_right[2]], color='r', linewidth=2)
+    # Update the figure
+    plt.draw()
+    plt.pause(0.05)
+    plt.ioff() #turn off interactive plotting
+    return fig
