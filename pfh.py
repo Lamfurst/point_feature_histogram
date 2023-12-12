@@ -147,37 +147,160 @@ class point_feature_histogram(object):
             pfh = self._computePointPFHSignature(idx, normal_vec_list, nb_idx_list)
             pfh_list[idx] = pfh
         return pfh_list
+
+def getCorrespondencesPFH(pfh_sig_source, pfh_sig_target):
+    # pfh_source and pfh_target are lists of PFH signatures
+    # return a list of correspondences
+    pfh_sig_target_array = np.array(pfh_sig_target)
+
+    correspondeces = []
+
+    for i in range(len(pfh_sig_source)):
+        source_pfh = pfh_sig_source[i]
+        differences = pfh_sig_target_array - source_pfh
+        distances = np.linalg.norm(differences, axis=1)
+        min_idx = np.argmin(distances)
+        correspondeces.append([i, min_idx, distances[min_idx]])
+    return correspondeces
+
+def getTransform(Cp, Cq):
+    # Cp np.array(3,n)
+    # Cq np.array(3,n)
+    p_bar = np.mean(Cp, axis=1).reshape(3, 1)
+    p_centered = Cp - p_bar
+    q_bar = np.mean(Cq, axis=1).reshape(3, 1)
+    q_centered = Cq - q_bar
+    S = p_centered @ q_centered.T
+    U, _, Vt = np.linalg.svd(S)
+    detVUT = np.linalg.det(Vt.T @ U.T)
+    R = Vt.T @ np.diag([1, 1, detVUT]) @ U.T
+    t = q_bar - R @ p_bar
+    return R, t
+
+def tranformPCArray(pc_array, R, t):
+        pc_array_transformed = R @ pc_array + t
+        return pc_array_transformed
     
-    def solve(self, source_pc, target_pc):
-        # source_pc and target_pc are 3xn numpy arrays
-        # return the transformation from source_pc to target_pc
-        pass
+
+def solve_pfh(source_pc_array, target_pc_array, radius, div):
+    PFH_source = point_feature_histogram(radius, source_pc_array, div)
+    pfh_sig_source = PFH_source.computePFHSignatures()
+    print("Done computing PFH signatures for source point cloud")
+
+    PFH_target = point_feature_histogram(radius, target_pc_array, div)
+    pfh_sig_target = PFH_target.computePFHSignatures()
+    print("Done computing PFH signatures for target point cloud")
+
+    C = getCorrespondencesPFH(pfh_sig_source, pfh_sig_target)
+    # print(type(C))
+    # print(len(C))
+    # print(C[0])
+
+    # Sort C by distance C is a list of (source_idx, target_idx, distance)
+    C.sort(key=lambda x: x[2])
+
+    # Run RANSAC on the top 30% of the correspondences
+    C = C[:int(len(C) * 0.3)]
 
 
-    # Steps:
-    # 1. Compute the normal at each point in the point cloud
-    # 2. Compute the PFH signature for each point
-    # 3. Compute the transformation between the source and target point clouds
+    # Run the RANSAC algorithm
+    iter = 10000
+    threshold = 0.01
+    N = len(C) * 0.8
+    R = None
+    t = None
+    error = np.inf
 
-    """
-    normal_vec_list = []
-    nb_idx_list = []
+    for _it in range(iter):
+        # Randomly pick 5 correspondences
+        idx = np.random.choice(len(C), 5, replace=False)
+        Cp = []
+        Cq = []
+        for i in idx:
+            p = source_pc_array[:,C[i][0]]
+            q = target_pc_array[:,C[i][1]]
+            Cp.append(p)
+            Cq.append(q)
+        Cp = np.hstack(Cp)
+        Cq = np.hstack(Cq)
+        R_tmp, t_tmp = getTransform(Cp, Cq)
 
-    for idx, p in enumerate(pc_source):
-        nb_idx, nb_point = getNeighbors(p)
-        normal_vec = getNormal(p, nb_idx, nb_point)
+        # For correspondences not used in RANSAC, compute the error
+        # If error is less than threshold, add the correspondences to the set cp and cq
+        Cp_tmp = []
+        Cq_tmp = []
+        for i in range(len(C)):
+            if i not in idx:
+                p = source_pc_array[:,C[i][0]]
+                q = target_pc_array[:,C[i][1]]
+                error_outlier = np.linalg.norm(q - R_tmp @ p - t_tmp)**2
+                if error_outlier < threshold:
+                    Cp_tmp.append(p)
+                    Cq_tmp.append(q)
+        Cp_tmp = np.hstack(Cp_tmp)
+        Cq_tmp = np.hstack(Cq_tmp)
+        Cp = np.hstack([Cp, Cp_tmp])
+        Cq = np.hstack([Cq, Cq_tmp])
+        if Cp.shape[1] > N:
+            R_tmp, t_tmp = getTransform(Cp, Cq)
+            Cp_transformed = tranformPCArray(Cp, R_tmp, t_tmp)
+            error_tmp = np.linalg.norm(Cq - Cp_transformed)**2
+            if error_tmp < error:
+                R = R_tmp
+                t = t_tmp
+                error = error_tmp
 
-        normal_vec_list.append(normal_vec)
-        nb_idx_list.append(nb_idx)
+
+
+    # iter = 100000
+    # threshold = 0.001
+    # R = None
+    # t = None
+
+    # # Error is iinifity
+    # error = np.inf
     
-    # Compute the PFH signature for each point
-    pfh_list = []
-    for idx, p in enumerate(pc_source):
-        pfh = computePointPFHSignature(p, normal_vec_list, nb_idx_list)
-        pfh_list.append(pfh)
-    
-    """
-    
+    # for _it in range(iter):
+    #     # Randomly pick 5 correspondences
+    #     idx = np.random.choice(len(C), 10, replace=False)
+    #     Cp = []
+    #     Cq = []
+    #     for i in idx:
+    #         p = source_pc_array[:,C[i][0]]
+    #         q = target_pc_array[:,C[i][1]]
+    #         Cp.append(p)
+    #         Cq.append(q)
+    #     Cp = np.hstack(Cp)
+    #     Cq = np.hstack(Cq)
+    #     R_tmp, t_tmp = getTransform(Cp, Cq)
+
+    #     Cp_transformed = tranformPCArray(Cp, R_tmp, t_tmp)
+    #     error_tmp = np.linalg.norm(Cq - Cp_transformed)**2 / len(C)
+    #     if error_tmp < error:
+    #         R = R_tmp
+    #         t = t_tmp
+    #         print("R", R)
+    #         print("t", t)
+    #         error = error_tmp
+    #     # if error_tmp < threshold:
+    #     #     print(_it)
+    #     #     break
+        
+
+
+    # for i in range(len(C)):
+    #     p = source_pc_array[:,C[i][0]]
+    #     q = target_pc_array[:,C[i][0]]
+    #     Cp.append(p)
+    #     Cq.append(q)
+    # Cp = np.hstack(Cp)
+    # print(Cp.shape)
+    # Cq = np.hstack(Cq)
+    # print(Cq.shape)
+    # R, t = getTransform(Cp, Cq)
+
+    source_pc_array_transformed = tranformPCArray(source_pc_array, R, t)
+    return source_pc_array_transformed, error
 
 
     

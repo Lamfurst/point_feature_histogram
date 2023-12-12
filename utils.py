@@ -24,6 +24,28 @@ def load_pc(filename):
 
     return pc
 
+def load_pc_np(filename):
+    """Load a numpy PC.
+
+    Loads a point cloud from a npy file.
+
+    inputs:
+        filename - a string containing the files name.
+    outputs:
+        pc - a list of 3 by 1 numpy matrices that represent the points.
+
+    """
+    pc_source = numpy.load(filename)
+    numPoints = len(pc_source)
+    pointCloudSource = []
+    row = []
+    for i in range(numPoints):
+        for j in range(3):
+            row.append(pc_source[i][j])
+        pointCloudSource.append(numpy.matrix([float(x) for x in row]).T)
+        row = []
+
+    return pointCloudSource
 
 def view_pc(pcs, fig=None, color='b', marker='o'):
     """Visualize a pc.

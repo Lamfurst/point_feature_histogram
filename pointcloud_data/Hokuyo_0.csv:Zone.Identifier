@@ -1,0 +1,4 @@
+[ZoneTransfer]
+ZoneId=3
+ReferrerUrl=http://robotics.ethz.ch/~asl-datasets/stairs_26-Aug-2011-14_26_14/csv_local/
+HostUrl=http://robotics.ethz.ch/~asl-datasets/stairs_26-Aug-2011-14_26_14/csv_local/Hokuyo_0.csv
