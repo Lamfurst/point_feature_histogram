@@ -3,17 +3,18 @@ import utils
 import numpy
 import matplotlib.pyplot as plt
 ###YOUR IMPORTS HERE###
-
+import time
 ###YOUR IMPORTS HERE###
 
 
 def main():
     #Import the cloud
-    pc_source = utils.load_pc('cloud_icp_source.csv')
-
-    ###YOUR CODE HERE###
-    pc_target = utils.load_pc('cloud_icp_target0.csv') # Change this to load in a different target
-
+    # pc_source = utils.load_pc('pointcloud_data/cloud_icp_source.csv')
+    # pc_target = utils.load_pc('pointcloud_data/cloud_icp_target3.csv') # Change this to load in a different target
+    pc_source = utils.load_pc_np('pointcloud_data/face_source.npy')
+    pc_target = utils.load_pc_np('pointcloud_data/face_target.npy')
+    # pc_source = utils.load_pc_np('pointcloud_data/plant_source.npy')
+    # pc_target = utils.load_pc_np('pointcloud_data/plant_target3.npy')
     def getTransform(Cp, Cq):
         # Cp np.array(3,n)
         # Cq np.array(3,n)
@@ -73,17 +74,17 @@ def main():
             pc_source.append(pc_source_array[:,i].reshape(3, 1))
         return pc_source, error_his
 
-    pc_source, error_his = icp(pc_source, pc_target)
+    curr_time = time.time()
+    pc_source, error_his = icp(pc_source, pc_target, 2000)
+    print("Time elapsed: ", time.time() - curr_time, "seconds")
     # Plot Error_his vs Iteration on another figure
+    pc_source_array = utils.convert_pc_to_matrix(pc_source)
+    pc_target_array = utils.convert_pc_to_matrix(pc_target)
+
+    error = utils.get_average_error(pc_source_array, pc_target_array)
+    print(error)
 
     utils.view_pc([pc_source, pc_target], None, ['b', 'r'], ['o', '^'])
-    plt.axis([-0.15, 0.15, -0.15, 0.15])
-
-    plt.figure()
-    plt.plot(error_his)
-    plt.xlabel('Iteration')
-    plt.ylabel('Error')
-    plt.title('Error vs Iteration')
     ###YOUR CODE HERE###
 
     plt.show()

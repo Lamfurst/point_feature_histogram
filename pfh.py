@@ -130,7 +130,7 @@ class point_feature_histogram(object):
                 feature_list[curr_pose] = feature
                 curr_pose += 1
         return self._computeHistogram(feature_list)
-    
+         
     def computePFHSignatures(self):
         # Compute the PFH signature for each point
         pc_num = self._pc.shape[1]
@@ -147,7 +147,7 @@ class point_feature_histogram(object):
             pfh = self._computePointPFHSignature(idx, normal_vec_list, nb_idx_list)
             pfh_list[idx] = pfh
         return pfh_list
-
+    
 def getCorrespondencesPFH(pfh_sig_source, pfh_sig_target):
     # pfh_source and pfh_target are lists of PFH signatures
     # return a list of correspondences
@@ -185,84 +185,40 @@ def tranformPCArray(pc_array, R, t):
 def solve_pfh(source_pc_array, target_pc_array, radius, div):
     PFH_source = point_feature_histogram(radius, source_pc_array, div)
     pfh_sig_source = PFH_source.computePFHSignatures()
-    print("Done computing PFH signatures for source point cloud")
+    print("...Done computing PFH signatures for source point cloud")
 
     PFH_target = point_feature_histogram(radius, target_pc_array, div)
     pfh_sig_target = PFH_target.computePFHSignatures()
-    print("Done computing PFH signatures for target point cloud")
+    print("...Done computing PFH signatures for target point cloud")
 
     C = getCorrespondencesPFH(pfh_sig_source, pfh_sig_target)
-    # print(type(C))
-    # print(len(C))
-    # print(C[0])
 
     # Sort C by distance C is a list of (source_idx, target_idx, distance)
     C.sort(key=lambda x: x[2])
 
     # Run RANSAC on the top 30% of the correspondences
-    C = C[:int(len(C) * 0.3)]
-
-
-    # Run the RANSAC algorithm
-    iter = 10000
-    threshold = 0.01
-    N = len(C) * 0.8
-    R = None
-    t = None
-    error = np.inf
-
-    for _it in range(iter):
-        # Randomly pick 5 correspondences
-        idx = np.random.choice(len(C), 5, replace=False)
-        Cp = []
-        Cq = []
-        for i in idx:
-            p = source_pc_array[:,C[i][0]]
-            q = target_pc_array[:,C[i][1]]
-            Cp.append(p)
-            Cq.append(q)
-        Cp = np.hstack(Cp)
-        Cq = np.hstack(Cq)
-        R_tmp, t_tmp = getTransform(Cp, Cq)
-
-        # For correspondences not used in RANSAC, compute the error
-        # If error is less than threshold, add the correspondences to the set cp and cq
-        Cp_tmp = []
-        Cq_tmp = []
-        for i in range(len(C)):
-            if i not in idx:
-                p = source_pc_array[:,C[i][0]]
-                q = target_pc_array[:,C[i][1]]
-                error_outlier = np.linalg.norm(q - R_tmp @ p - t_tmp)**2
-                if error_outlier < threshold:
-                    Cp_tmp.append(p)
-                    Cq_tmp.append(q)
-        Cp_tmp = np.hstack(Cp_tmp)
-        Cq_tmp = np.hstack(Cq_tmp)
-        Cp = np.hstack([Cp, Cp_tmp])
-        Cq = np.hstack([Cq, Cq_tmp])
-        if Cp.shape[1] > N:
-            R_tmp, t_tmp = getTransform(Cp, Cq)
-            Cp_transformed = tranformPCArray(Cp, R_tmp, t_tmp)
-            error_tmp = np.linalg.norm(Cq - Cp_transformed)**2
-            if error_tmp < error:
-                R = R_tmp
-                t = t_tmp
-                error = error_tmp
+    _len = min(len(C) * 0.3, 150)
+    C = C[:int(_len)]
 
 
 
-    # iter = 100000
-    # threshold = 0.001
+    # # Run the RANSAC algorithm
+    # ## Cup and Plant
+    # # iter = 10000
+    # # threshold = 0.01
+    # # N = len(C) * 0.8
+
+    # # Face
+    # iter = 20000
+    # threshold = 0.05
+    # N = len(C) * 0.8
     # R = None
     # t = None
-
-    # # Error is iinifity
     # error = np.inf
-    
+
     # for _it in range(iter):
     #     # Randomly pick 5 correspondences
-    #     idx = np.random.choice(len(C), 10, replace=False)
+    #     idx = np.random.choice(len(C), 4, replace=False)
     #     Cp = []
     #     Cq = []
     #     for i in idx:
@@ -274,33 +230,67 @@ def solve_pfh(source_pc_array, target_pc_array, radius, div):
     #     Cq = np.hstack(Cq)
     #     R_tmp, t_tmp = getTransform(Cp, Cq)
 
-    #     Cp_transformed = tranformPCArray(Cp, R_tmp, t_tmp)
-    #     error_tmp = np.linalg.norm(Cq - Cp_transformed)**2 / len(C)
-    #     if error_tmp < error:
-    #         R = R_tmp
-    #         t = t_tmp
-    #         print("R", R)
-    #         print("t", t)
-    #         error = error_tmp
-    #     # if error_tmp < threshold:
-    #     #     print(_it)
-    #     #     break
-        
+    #     # For correspondences not used in RANSAC, compute the error
+    #     # If error is less than threshold, add the correspondences to the set cp and cq
+    #     Cp_tmp = []
+    #     Cq_tmp = []
+    #     for i in range(len(C)):
+    #         if i not in idx:
+    #             p = source_pc_array[:,C[i][0]]
+    #             q = target_pc_array[:,C[i][1]]
+    #             error_outlier = np.linalg.norm(q - R_tmp @ p - t_tmp)**2
+    #             if error_outlier < threshold:
+    #                 Cp_tmp.append(p)
+    #                 Cq_tmp.append(q)
+    #     if len(Cp_tmp) != 0:
+    #         Cp_tmp = np.hstack(Cp_tmp)
+    #         Cq_tmp = np.hstack(Cq_tmp)
+    #         Cp = np.hstack([Cp, Cp_tmp])
+    #         Cq = np.hstack([Cq, Cq_tmp])
+    #     if Cp.shape[1] > N:
+    #         R_tmp, t_tmp = getTransform(Cp, Cq)
+    #         Cp_transformed = tranformPCArray(Cp, R_tmp, t_tmp)
+    #         error_tmp = np.linalg.norm(Cq - Cp_transformed)**2
+    #         if error_tmp < error:
+    #             R = R_tmp
+    #             t = t_tmp
+    #             error = error_tmp
 
 
-    # for i in range(len(C)):
-    #     p = source_pc_array[:,C[i][0]]
-    #     q = target_pc_array[:,C[i][0]]
-    #     Cp.append(p)
-    #     Cq.append(q)
-    # Cp = np.hstack(Cp)
-    # print(Cp.shape)
-    # Cq = np.hstack(Cq)
-    # print(Cq.shape)
-    # R, t = getTransform(Cp, Cq)
+
+    # iter = 100000
+    iter = 1000
+    # iter = 30000
+    R = None
+    t = None
+
+    # Error is iinifity
+    error = np.inf
+    
+    for _it in range(iter):
+        # Randomly pick 5 correspondences
+        idx = np.random.choice(len(C), 4, replace=False)
+        # idx = np.random.choice(len(C), 6, replace=False)
+        Cp = []
+        Cq = []
+        for i in idx:
+            p = source_pc_array[:,C[i][0]]
+            q = target_pc_array[:,C[i][1]]
+            Cp.append(p)
+            Cq.append(q)
+        Cp = np.hstack(Cp)
+        Cq = np.hstack(Cq)
+        R_tmp, t_tmp = getTransform(Cp, Cq)
+
+        Cp_transformed = tranformPCArray(Cp, R_tmp, t_tmp)
+        error_tmp = np.linalg.norm(Cq - Cp_transformed)**2
+        if error_tmp < error:
+            R = R_tmp
+            t = t_tmp
+            error = error_tmp
 
     source_pc_array_transformed = tranformPCArray(source_pc_array, R, t)
-    return source_pc_array_transformed, error
+    return source_pc_array_transformed, error, R, t
 
 
     

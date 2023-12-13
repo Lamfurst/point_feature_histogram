@@ -3,7 +3,7 @@ import numpy as np
 import pandas as pd
 
 # Load your CSV file
-csv_file = 'pointcloud_data/Hokuyo_1.csv'  # Replace with your CSV file path
+csv_file = 'pointcloud_data/Hokuyo_2.csv'  # Replace with your CSV file path
 data = pd.read_csv(csv_file, usecols=[1, 2, 3])  # Assuming columns 2, 3, 4 are X, Y, Z
 
 # Convert the DataFrame to a NumPy array

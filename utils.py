@@ -24,6 +24,9 @@ def load_pc(filename):
 
     return pc
 
+# This part of the code is copied from the following link:
+# https://github.com/stevenliu216/Point-Feature-Histogram
+# For purpose of loading the point cloud data
 def load_pc_np(filename):
     """Load a numpy PC.
 
@@ -106,6 +109,7 @@ def view_pc(pcs, fig=None, color='b', marker='o'):
     ax.set_xlabel('X')
     ax.set_ylabel('Y')
     ax.set_zlabel('Z')
+    ax.set_aspect('equal')
     
     # Update the figure
     plt.draw()
@@ -350,3 +354,8 @@ def draw_normal(fig, origin, normal, scale=0.1):
     plt.pause(0.05)
     plt.ioff() #turn off interactive plotting
     return fig
+
+def get_average_error(source_pc_array, target_pc_array):
+    error_array = source_pc_array - target_pc_array
+    total_error = numpy.sum(numpy.square(error_array)) / error_array.shape[1]
+    return total_error

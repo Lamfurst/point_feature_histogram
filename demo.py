@@ -17,50 +17,35 @@ if __name__ == '__main__':
     print("...Done loading target point cloud. \n")
 
 
-    idx = 200 # idx 200 on the handle
     # Display the starting data and print the point with idx as red dot
-    # utils.view_pc([source_pc, [source_pc[idx]]], color = ['r', 'b'],  marker=['o', 'o'])
     utils.view_pc([source_pc, target_pc], color = ['r', 'b'],  marker=['o', 'o'])
 
     plt.title('Starting Point Clouds')
-    plt.show()
     source_pc_array = utils.convert_pc_to_matrix(source_pc)
     target_pc_array = utils.convert_pc_to_matrix(target_pc)
 
-    source_pc_array, error_track = pfh.solve_pfh(source_pc_array, target_pc_array, 0.03, 5)
-    # source_pc_array, error_track = pfh.solve_pfh(source_pc_array, target_pc_array, 2, 5)
-    source_pc = utils.convert_matrix_to_pc(source_pc_array)
+    print("...Computing PFH. It takes about 20 sec to Compute\n")
+    print("...Please Be Patient : )\n")
 
+    curr_time = time.time()
+
+    # Plant and cup
+    source_pc_array, error_track, R, t = pfh.solve_pfh(source_pc_array, target_pc_array, 0.03, 5)
+
+    # Face
+    # source_pc_array, error_track = pfh.solve_pfh(source_pc_array, target_pc_array, 0.03, 5)
+
+    # Hokuyo
+    # source_pc_array, error_track, R, t = pfh.solve_pfh(source_pc_array, target_pc_array, 2, 5)
+
+    print("Time elapsed: ", time.time() - curr_time, "seconds")
+    # Compute total error
+    total_error = utils.get_average_error(source_pc_array, target_pc_array)
+    source_pc = utils.convert_matrix_to_pc(source_pc_array)
     print("...Done computing PFH. \n")
-    print("Error is ", error_track)
+
+    print("Error is ", total_error)
     utils.view_pc([source_pc, target_pc], color = ['r', 'b'],  marker=['o', 'o'])
     plt.title('Point Clouds after PFH')
     plt.show()
-
-    
-
-    # # Time the PFH computation
-    # start_time = time.time()
-    # PFH_source = pfh.point_feature_histogram(0.03, source_pc_array, 5)
-    # pfh_list = PFH_source.computePFHSignatures()
-    # end_time = time.time()
-    # print("Time elapsed: ", end_time - start_time, "seconds")
-
-    
-    # pfh_sample = pfh_list[idx]
-    # # Use plot to plot the histogram
-    # plt.bar(range(len(pfh_sample)), pfh_sample)
-    # plt.show()
-
-    # start_time = time.time()
-    # PFH_target = pfh.point_feature_histogram(0.03, target_pc_array, 5)
-    # pfh_list = PFH_target.computePFHSignatures()
-    # end_time = time.time()
-    # print("Time elapsed: ", end_time - start_time, "seconds")
-
-    # pfh_sample_target = pfh_list[idx]
-    # # Use plot to plot the histogram
-    # plt.bar(range(len(pfh_sample_target)), pfh_sample_target)
-
-    # plt.show()
 
